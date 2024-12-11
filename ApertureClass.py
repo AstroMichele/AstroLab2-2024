@@ -16,7 +16,7 @@ if not sys.warnoptions:
 
 class AperturePhotometry:
     def __init__(self):
-        self.data_path = '../../group08_HAT-P-12_20230214/'
+        self.data_path = '../group08_HAT-P-12_20230214/'
 
         self.readout_noise = 7.1
         self.gain = 1.91
@@ -24,12 +24,12 @@ class AperturePhotometry:
         self.bias_std = 1.3
 
         #loading the median bias and its associated error
-        self.median_bias = pickle.load(open('../../Results/median_bias.p', 'rb'))
-        self.median_bias_error = pickle.load(open('../../Results/median_bias_error.p', 'rb'))
+        self.median_bias = pickle.load(open('../Results/median_bias.p', 'rb'))
+        self.median_bias_error = pickle.load(open('../Results/median_bias_error.p', 'rb'))
 
         #loading the median normalized flat and its associated error
-        self.median_normalized_flat = pickle.load(open('../../Results/median_normalized_flat.p', 'rb'))
-        self.median_normalized_flat_error = pickle.load(open('../../Results/median_normalized_flat_error.p', 'rb'))
+        self.median_normalized_flat = pickle.load(open('../Results/median_normalized_flat.p', 'rb'))
+        self.median_normalized_flat_error = pickle.load(open('../Results/median_normalized_flat_error.p', 'rb'))
 
         self.science_path = self.data_path + 'science/'
         self.science_list = np.genfromtxt(self.science_path + 'science_list', dtype=str)
