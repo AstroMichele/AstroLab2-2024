@@ -47,7 +47,9 @@ class AperturePhotometry:
         self.julian_date = np.empty(self.science_size)
         self.midexp = np.empty(self.science_size)
         self.science_corrected = np.empty([156, 521, self.science_size])
+        self.science_corrected_error = np.empty([156, 521, self.science_size])
         self.science_sky_corrected = np.empty([156, 521, self.science_size])
+        self.science_sky_corrected_error = np.empty([156, 521, self.science_size])
         self.photometry = np.empty(self.science_size)
         self.photometry_error = np.empty(self.science_size)
         self.x_refined = np.empty(self.science_size)
@@ -70,20 +72,22 @@ class AperturePhotometry:
             science_data = science_fits[0].data * self.gain
             science_corr, science_corr_error = self.correct_science_frame(science_data)
             self.science_corrected[:, :, i_science] = science_corr
+            self.science_corrected_error[:, :, i_science] = science_corr_error
 
             science_fits.close()
 
             x_ref, y_ref = self.compute_centroid(science_corr, x_coord, y_coord)
             self.x_refined[i_science] = x_ref
             self.y_refined[i_science] = y_ref
-            sky_bkg, sky_bkg_error = self.compute_sky_background(science_corr, science_corr_error, x_ref, y_ref)
+            sky_bkg, sky_bkg_error = self.compute_sky_background(science_corr, x_ref, y_ref)
             self.sky_background[i_science], self.sky_background_error[i_science] = sky_bkg, sky_bkg_error
 
         #aperture photometry
 
             science_sky_corr = science_corr - sky_bkg
-            science_sky_corr_error = np.sqrt((sky_bkg*science_corr_error)**2 + (sky_bkg_error*science_corr)**2)
+            science_sky_corr_error = np.sqrt((science_corr_error)**2 + (sky_bkg_error)**2)
             self.science_sky_corrected[:, :, i_science] = science_sky_corr
+            self.science_sky_corrected_error[:, :, i_science] = science_sky_corr_error
 
             target_distance = np.sqrt((self.X-x_ref)**2 + (self.Y-y_ref)**2)
 
@@ -102,7 +106,7 @@ class AperturePhotometry:
             self.aperture[i_science] = aperture_size
 
             self.photometry[i_science] = np.sum(science_sky_corr[aperture_selection])
-            self.photometry_error[i_science] = np.sqrt(np.sum(science_sky_corr_error[aperture_selection]**2))
+            self.photometry_error[i_science] = np.sqrt(np.sum((science_sky_corr_error[aperture_selection])**2))
 
         #FWHM
 
@@ -160,14 +164,14 @@ class AperturePhotometry:
 
         return x_target_refined, y_target_refined
     
-    def compute_sky_background(self, science_frame, science_frame_error, x_pos, y_pos):
+    def compute_sky_background(self, science_frame, x_pos, y_pos):
         target_distance = np.sqrt((self.X-x_pos)**2 + (self.Y-y_pos)**2)
 
         annulus_selection = (target_distance > self.inner_radius) & (target_distance<=self.outer_radius)
 
         #sky_flux_average = np.sum(science_frame[annulus_selection]) / np.sum(annulus_selection)
         sky_flux_median = np.median(science_frame[annulus_selection])
-        sky_flux_error = np.mean(science_frame_error[annulus_selection])
+        sky_flux_error = np.std(science_frame[annulus_selection])/np.sqrt(len(science_frame[annulus_selection]))
         
         return sky_flux_median, sky_flux_error
 
@@ -176,7 +180,7 @@ class AperturePhotometry:
         science_corrected = science_debiased / self.median_normalized_flat
 
         science_debiased_error = np.sqrt(self.readout_noise**2 + science_debiased + self.median_bias_error**2)
-        science_corrected_error = science_debiased * np.sqrt((science_debiased_error/science_debiased)**2 + (self.median_normalized_flat/self.median_normalized_flat_error)**2)
+        science_corrected_error = np.sqrt((science_debiased_error/science_debiased)**2 + (self.median_normalized_flat_error/self.median_normalized_flat)**2)
 
         return science_corrected, science_corrected_error
 
