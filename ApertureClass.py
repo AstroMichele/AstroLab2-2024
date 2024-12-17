@@ -98,7 +98,7 @@ class AperturePhotometry:
             aperture_selection = (target_distance < aperture_size)
             fractional_flux = np.sum(science_sky_corr[aperture_selection]) / total_flux
 
-            while fractional_flux < 0.9:
+            while fractional_flux < 0.99:
                 aperture_size += 0.05
                 aperture_selection = (target_distance < aperture_size)
                 fractional_flux = np.sum(science_sky_corr[aperture_selection]) / total_flux
@@ -180,7 +180,7 @@ class AperturePhotometry:
         science_corrected = science_debiased / self.median_normalized_flat
 
         science_debiased_error = np.sqrt(self.readout_noise**2 + science_debiased + self.median_bias_error**2)
-        science_corrected_error = np.sqrt((science_debiased_error/science_debiased)**2 + (self.median_normalized_flat_error/self.median_normalized_flat)**2)
+        science_corrected_error = np.sqrt((science_debiased_error/self.median_normalized_flat)**2 + (self.median_normalized_flat_error*science_debiased/self.median_normalized_flat**2)**2)
 
         return science_corrected, science_corrected_error
 
