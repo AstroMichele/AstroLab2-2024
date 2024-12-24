@@ -103,7 +103,7 @@ class Filtering:
 
     def filtering(self, dictionary, window, break_tol, duration_factor, method=''):
         self.time = dictionary['time']
-        tol = 0.00001
+        tol = 0.1
 
         #SAP
         self.sap_flux = dictionary['sap_flux']
@@ -116,7 +116,7 @@ class Filtering:
         self.sap_flux_median_error = np.median(self.sap_flux_err/self.sap_flatten_model_masked)
         self.STD_masked, self.STD_notmasked = self.compute_STD(self.sap_flux_flatten, self.sap_flux_flatten_masked, self.mask)
 
-        if (np.abs(self.STD_masked - self.sap_flux_median_error) or np.abs(self.STD_notmasked - self.sap_flux_median_error)) < tol:
+        if ((1 - self.sap_flux_median_error/self.STD_masked) or (1 - self.sap_flux_median_error/self.STD_notmasked)) < tol:
             print('This is worth, give it a look!')
         else:
             print('You may discard this configuration, but give it a look. Just in case...')
@@ -137,7 +137,7 @@ class Filtering:
         self.pdcsap_flux_median_error = np.median(self.pdcsap_flux_err/self.pdcsap_flatten_model_masked)
         self.STD_masked_pdc, self.STD_notmasked_pdc = self.compute_STD(self.pdcsap_flux_flatten, self.pdcsap_flux_flatten_masked, self.pdcmask) 
 
-        if (np.abs(self.STD_masked_pdc - self.pdcsap_flux_median_error) or np.abs(self.STD_notmasked_pdc - self.pdcsap_flux_median_error)) < tol:
+        if ((1 - self.pdcsap_flux_median_error/self.STD_masked_pdc) or (1 - self.pdcsap_flux_median_error/self.STD_notmasked_pdc)) < tol:
             print('This is worth, give it a look!')
         else:
             print('You may discard this configuration, but give it a look. Just in case...')
