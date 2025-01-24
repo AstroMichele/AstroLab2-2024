@@ -36,7 +36,7 @@ class AperturePhotometry:
         self.science_size = len(self.science_list)
 
         ylen, xlen = np.shape(self.median_bias)
-        self.x_axis = np.arange(0, xlen, 1.)                 #we do not save them to save memory since they are not useful for the analysis
+        self.x_axis = np.arange(0, xlen, 1.)
         self.y_axis = np.arange(0, ylen, 1.)
         self.X, self.Y = np.meshgrid(self.x_axis, self.y_axis)
 
@@ -79,7 +79,7 @@ class AperturePhotometry:
             x_ref, y_ref = self.compute_centroid(science_corr, x_coord, y_coord)
             self.x_refined[i_science] = x_ref
             self.y_refined[i_science] = y_ref
-            sky_bkg, sky_bkg_error = self.compute_sky_background(science_corr, x_ref, y_ref)
+            sky_bkg, sky_bkg_error = self.compute_sky_background(science_corr, science_corr_error, x_ref, y_ref)
             self.sky_background[i_science], self.sky_background_error[i_science] = sky_bkg, sky_bkg_error
 
         #aperture photometry
@@ -110,10 +110,10 @@ class AperturePhotometry:
 
         #FWHM
 
-            total_flux = np.nansum(science_corr*inner_selection)
+            total_flux = np.nansum(science_sky_corr*inner_selection)
 
-            flux_x = np.nansum(science_corr*inner_selection, axis=0) 
-            flux_y = np.nansum(science_corr*inner_selection, axis=1) 
+            flux_x = np.nansum(science_sky_corr*inner_selection, axis=0) 
+            flux_y = np.nansum(science_sky_corr*inner_selection, axis=1) 
 
             cumulative_sum_x = np.cumsum(flux_x)/total_flux
             cumulative_sum_y = np.cumsum(flux_y)/total_flux
@@ -164,23 +164,24 @@ class AperturePhotometry:
 
         return x_target_refined, y_target_refined
     
-    def compute_sky_background(self, science_frame, x_pos, y_pos):
+    def compute_sky_background(self, science_frame, science_frame_error, x_pos, y_pos):
         target_distance = np.sqrt((self.X-x_pos)**2 + (self.Y-y_pos)**2)
 
         annulus_selection = (target_distance > self.inner_radius) & (target_distance<=self.outer_radius)
-
-        #sky_flux_average = np.sum(science_frame[annulus_selection]) / np.sum(annulus_selection)
-        sky_flux_median = np.median(science_frame[annulus_selection])
-        sky_flux_error = np.std(science_frame[annulus_selection])/np.sqrt(len(science_frame[annulus_selection]))
         
-        return sky_flux_median, sky_flux_error
+        sky_flux_average = np.sum(science_frame[annulus_selection]) / np.sum(annulus_selection)
+        sky_flux_average_error = np.sqrt(np.sum(science_frame_error[annulus_selection]**2))/np.sum(annulus_selection)
+        #sky_flux_median = np.median(science_frame[annulus_selection])
+        #sky_flux_median_error = np.std(science_frame[annulus_selection])/np.sqrt(len(science_frame[annulus_selection]))
+        
+        return sky_flux_average, sky_flux_average_error
 
     def correct_science_frame(self, science_data):
         science_debiased = science_data - self.median_bias
         science_corrected = science_debiased / self.median_normalized_flat
 
         science_debiased_error = np.sqrt(self.readout_noise**2 + science_debiased + self.median_bias_error**2)
-        science_corrected_error = np.sqrt((science_debiased_error/self.median_normalized_flat)**2 + (self.median_normalized_flat_error*science_debiased/self.median_normalized_flat**2)**2)
+        science_corrected_error = science_corrected*np.sqrt((science_debiased_error/science_debiased)**2 + (self.median_normalized_flat_error/self.median_normalized_flat)**2)
 
         return science_corrected, science_corrected_error
 

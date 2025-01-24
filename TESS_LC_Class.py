@@ -12,7 +12,10 @@ if not sys.warnoptions:
 
 class Selection:
     def __init__(self, lcf_hdu, sector):
-        self.bjd_tdb = lcf_hdu[1].data['TIME'] + lcf_hdu[1].header['BJDREFI'] +  lcf_hdu[1].header['BJDREFF']
+        self.bjd_tdb = lcf_hdu[1].data['TIME'] + lcf_hdu[1].header['BJDREFI'] + lcf_hdu[1].header['BJDREFF']
+        time = lcf_hdu[1].data['TIME']
+        self.time_offset = int(time[0]) + lcf_hdu[1].header['BJDREFI'] + lcf_hdu[1].header['BJDREFF']
+        self.offset = str(int(time[0]) + lcf_hdu[1].header['BJDREFI'] + lcf_hdu[1].header['BJDREFF'])
         self.sap_flux = lcf_hdu[1].data['SAP_FLUX']
         self.sap_flux_err = lcf_hdu[1].data['SAP_FLUX_ERR']
         self.pdcsap_flux = lcf_hdu[1].data['PDCSAP_FLUX']
@@ -32,27 +35,27 @@ class Selection:
         #selective_selection = ~(np.bitwise_and(self.quality_bitmask, reference_bitmask_in_decimal_system) > 0) & finite_selection
         self.conservative_selection = ~(self.quality_bitmask > 0) & finite_selection
 
-        plt.scatter(self.bjd_tdb[self.conservative_selection], self.sap_flux[self.conservative_selection],
+        plt.scatter(self.bjd_tdb[self.conservative_selection] - self.time_offset, self.sap_flux[self.conservative_selection],
             s=3, label='SAP - selected data')
-        plt.scatter(self.bjd_tdb, self.pdcsap_flux, s=5, label='PDCSAP')
-        plt.scatter(self.bjd_tdb[~self.conservative_selection], self.sap_flux[~self.conservative_selection],
+        plt.scatter(self.bjd_tdb - self.time_offset, self.pdcsap_flux, s=5, label='PDCSAP')
+        plt.scatter(self.bjd_tdb[~self.conservative_selection] - self.time_offset, self.sap_flux[~self.conservative_selection],
             s=3, c='r', label='SAP - excluded data')
-        plt.errorbar(self.bjd_tdb[self.conservative_selection], self.sap_flux[self.conservative_selection],
+        plt.errorbar(self.bjd_tdb[self.conservative_selection] - self.time_offset, self.sap_flux[self.conservative_selection],
             yerr=self.sap_flux_err[self.conservative_selection], fmt=' ', alpha=0.5, 
             ecolor='k', zorder=-1)
-        plt.xlabel('BJD_TDB [d]')
-        plt.ylabel('e-/s')
-        plt.title('TESS Lightcurve for HAT-P-12b - sector '+self.sector, fontsize = 12)
+        plt.xlabel('BJD_TDB - '+self.offset+' [d]')
+        plt.ylabel('Flux [$e^-/s$]')
 
         plt.legend()
         plt.show()
 
         sector_dictionary = {
+        'offset' : self.time_offset,
         'time': self.bjd_tdb[self.conservative_selection],
         'sap_flux': self.sap_flux[self.conservative_selection],
         'sap_flux_error': self.sap_flux_err[self.conservative_selection],
-        'pdcsap_flux': self.sap_flux[self.conservative_selection],
-        'pdcsap_flux_error': self.sap_flux_err[self.conservative_selection],
+        'pdcsap_flux': self.pdcsap_flux[self.conservative_selection],
+        'pdcsap_flux_error': self.pdcsap_flux_err[self.conservative_selection],
         }
 
         pickle.dump(sector_dictionary, open('../Results/TESS/sector'+self.sector+'_selected.p', 'wb'))
@@ -62,31 +65,31 @@ class Selection:
     def manual_selection(self, time0):
         final_selection = self.conservative_selection & (self.bjd_tdb > time0)
 
-        plt.scatter(self.bjd_tdb[self.conservative_selection], self.sap_flux[self.conservative_selection],
+        plt.scatter(self.bjd_tdb[self.conservative_selection] - self.time_offset, self.sap_flux[self.conservative_selection],
             s=5, label='SAP - selected data')
-        plt.scatter(self.bjd_tdb, self.pdcsap_flux, s=5, label='PDCSAP')
+        plt.scatter(self.bjd_tdb - self.time_offset, self.pdcsap_flux, s=5, label='PDCSAP')
 
 
-        plt.scatter(self.bjd_tdb[~self.conservative_selection], self.sap_flux[~self.conservative_selection],
+        plt.scatter(self.bjd_tdb[~self.conservative_selection] - self.time_offset, self.sap_flux[~self.conservative_selection],
             s=5, c='r', label='SAP - excluded data')
-        plt.scatter(self.bjd_tdb[~final_selection & self.conservative_selection], self.sap_flux[~final_selection & self.conservative_selection],
+        plt.scatter(self.bjd_tdb[~final_selection & self.conservative_selection] - self.time_offset, self.sap_flux[~final_selection & self.conservative_selection],
             s=15, c='y', marker='x', label='SAP - manually excluded')
-        plt.errorbar(self.bjd_tdb[self.conservative_selection], self.sap_flux[self.conservative_selection],
+        plt.errorbar(self.bjd_tdb[self.conservative_selection] - self.time_offset, self.sap_flux[self.conservative_selection],
             yerr=self.sap_flux_err[self.conservative_selection], fmt=' ', alpha=0.5, 
             ecolor='k', zorder=-1)
-        plt.xlabel('BJD_TDB [d]')
-        plt.ylabel('e-/s')
-        plt.title('TESS Lightcurve for HAT-P-12b - sector '+self.sector, fontsize = 12)
+        plt.xlabel('BJD_TDB - '+self.offset+' [d]')
+        plt.ylabel('Flux [$e^-/s$]')
 
         plt.legend()
         plt.show()
 
         sector_dictionary = {
+        'offset' : self.time_offset,
         'time': self.bjd_tdb[final_selection],
         'sap_flux': self.sap_flux[final_selection],
         'sap_flux_error': self.sap_flux_err[final_selection],
-        'pdcsap_flux': self.sap_flux[final_selection],
-        'pdcsap_flux_error': self.sap_flux_err[final_selection],
+        'pdcsap_flux': self.pdcsap_flux[final_selection],
+        'pdcsap_flux_error': self.pdcsap_flux_err[final_selection],
         }
 
         pickle.dump(sector_dictionary, open('../Results/TESS/sector'+self.sector+'_selected.p', 'wb'))
@@ -103,6 +106,8 @@ class Filtering:
 
     def filtering(self, dictionary, window, break_tol, duration_factor, method=''):
         self.time = dictionary['time']
+        self.time_offset = dictionary['offset']
+        self.offset = str(self.time_offset)
         tol = 0.1
 
         #SAP
@@ -154,35 +159,33 @@ class Filtering:
     #defining methods to display some plots for visual inspection
 
     def make_plot_model(self, pdc):
-        plt.title('TESS: original lightcurve and flattening model')
         if pdc == False:
-            plt.scatter(self.time, self.sap_flux, c='C0', s=3)
-            plt.errorbar(self.time, self.sap_flux, yerr=self.sap_flux_err, ecolor='k', fmt=' ', alpha=0.25, zorder=-1)
-            plt.plot(self.time, self.sap_flatten_model_masked, c='C1')
-            plt.ylabel('TESS SAP flux [e/s]')
+            plt.scatter(self.time - self.time_offset, self.sap_flux, c='C0', s=3)
+            plt.errorbar(self.time - self.time_offset, self.sap_flux, yerr=self.sap_flux_err, ecolor='k', fmt=' ', alpha=0.25, zorder=-1)
+            plt.plot(self.time - self.time_offset, self.sap_flatten_model_masked, c='C1')
+            plt.ylabel('TESS SAP flux [$e^-/s$]')
         else:
-            plt.scatter(self.time, self.pdcsap_flux, c='C0', s=3)
-            plt.errorbar(self.time, self.pdcsap_flux, yerr=self.pdcsap_flux_err, ecolor='k', fmt=' ', alpha=0.25, zorder=-1)
-            plt.plot(self.time, self.pdcsap_flatten_model_masked, c='C1')
-            plt.ylabel('TESS PDCSAP flux [e/s]')
+            plt.scatter(self.time - self.time_offset, self.pdcsap_flux, c='C0', s=3)
+            plt.errorbar(self.time - self.time_offset, self.pdcsap_flux, yerr=self.pdcsap_flux_err, ecolor='k', fmt=' ', alpha=0.25, zorder=-1)
+            plt.plot(self.time - self.time_offset, self.pdcsap_flatten_model_masked, c='C1')
+            plt.ylabel('TESS PDCSAP flux [$e^-/s$]')
 
-        plt.xlabel('BJD_TDB [d]')
+        plt.xlabel('BJD_TDB - '+self.offset+' [d]')
         
         plt.show()
     
     def make_plot_normalized(self, pdc):
-        plt.title('TESS: normalize SAP lightcurve')
 
         if pdc == False:
-            plt.scatter(self.time, self.sap_flux_flatten_masked, c='C0', s=3)
-            plt.errorbar(self.time, self.sap_flux_flatten_masked, yerr=self.sap_flux_err/self.sap_flatten_model, ecolor='k', fmt=' ', alpha=0.25, zorder=-1)
+            plt.scatter(self.time - self.time_offset, self.sap_flux_flatten_masked, c='C0', s=3)
+            plt.errorbar(self.time - self.time_offset, self.sap_flux_flatten_masked, yerr=self.sap_flux_err/self.sap_flatten_model, ecolor='k', fmt=' ', alpha=0.25, zorder=-1)
             plt.ylabel('TESS flattened SAP flux')
         else:
-            plt.scatter(self.time, self.pdcsap_flux_flatten_masked, c='C0', s=3)
-            plt.errorbar(self.time, self.pdcsap_flux_flatten_masked, yerr=self.pdcsap_flux_err/self.pdcsap_flatten_model, ecolor='k', fmt=' ', alpha=0.25, zorder=-1)
+            plt.scatter(self.time - self.time_offset, self.pdcsap_flux_flatten_masked, c='C0', s=3)
+            plt.errorbar(self.time - self.time_offset, self.pdcsap_flux_flatten_masked, yerr=self.pdcsap_flux_err/self.pdcsap_flatten_model, ecolor='k', fmt=' ', alpha=0.25, zorder=-1)
             plt.ylabel('TESS flattened SAP flux')
 
-        plt.xlabel('BJD_TDB [d]')
+        plt.xlabel('BJD_TDB - '+self.offset+' [d]')
         
         plt.show()
 
@@ -213,37 +216,35 @@ class Filtering:
         plt.show()
 
     def make_plot_comparison(self, pdc):
-        plt.title('TESS: comparison between models')
         if pdc == False:
-            plt.scatter(self.time, self.sap_flux, c='C0', s=3)
-            plt.errorbar(self.time, self.sap_flux, yerr=self.sap_flux_err, ecolor='k', fmt=' ', alpha=0.25, zorder=-1)
-            plt.plot(self.time, self.sap_flatten_model_masked, c='C1', zorder=1, label='Masked')
-            plt.plot(self.time, self.sap_flatten_model, c='C2', zorder=2, label='Unmasked')
-            plt.ylabel('TESS SAP flux [e/s]')
+            plt.scatter(self.time - self.time_offset, self.sap_flux, c='C0', s=3)
+            plt.errorbar(self.time - self.time_offset, self.sap_flux, yerr=self.sap_flux_err, ecolor='k', fmt=' ', alpha=0.25, zorder=-1)
+            plt.plot(self.time - self.time_offset, self.sap_flatten_model_masked, c='C1', zorder=1, label='Masked')
+            plt.plot(self.time - self.time_offset, self.sap_flatten_model, c='C2', zorder=2, label='Unmasked')
+            plt.ylabel('TESS SAP flux [$e^-/s$]')
         else:
-            plt.scatter(self.time, self.pdcsap_flux, c='C0', s=3)
-            plt.errorbar(self.time, self.pdcsap_flux, yerr=self.pdcsap_flux_err, ecolor='k', fmt=' ', alpha=0.25, zorder=-1)
-            plt.plot(self.time, self.pdcsap_flatten_model_masked, c='C1', zorder=1, label='Masked')
-            plt.plot(self.time, self.pdcsap_flatten_model, c='C2', zorder=2, label='Unmasked')
-            plt.ylabel('TESS PDCSAP flux [e/s]')
+            plt.scatter(self.time - self.time_offset, self.pdcsap_flux, c='C0', s=3)
+            plt.errorbar(self.time - self.time_offset, self.pdcsap_flux, yerr=self.pdcsap_flux_err, ecolor='k', fmt=' ', alpha=0.25, zorder=-1)
+            plt.plot(self.time - self.time_offset, self.pdcsap_flatten_model_masked, c='C1', zorder=1, label='Masked')
+            plt.plot(self.time - self.time_offset, self.pdcsap_flatten_model, c='C2', zorder=2, label='Unmasked')
+            plt.ylabel('TESS PDCSAP flux [$e^-/s$]')
 
-        plt.legend()
-        plt.xlabel('BJD_TDB [d]')
+        plt.legend(loc='best')
+        plt.xlabel('BJD_TDB - '+self.offset+' [d]')
         
         plt.show()
 
     def make_plot_comparison_methods(self, pdc, method='', color=''):
-        plt.title('TESS: comparison between methods')
         if pdc == False:
-            plt.scatter(self.time, self.sap_flux, c='C0', s=3, zorder=0)
-            plt.errorbar(self.time, self.sap_flux, yerr=self.sap_flux_err, ecolor='k', fmt=' ', alpha=0.25, zorder=-1)
-            plt.plot(self.time, self.sap_flatten_model_masked, zorder=1, label=method, c=color)
-            plt.ylabel('TESS SAP flux [e/s]')
+            plt.scatter(self.time - self.time_offset, self.sap_flux, c='C0', s=3, zorder=0)
+            plt.errorbar(self.time - self.time_offset, self.sap_flux, yerr=self.sap_flux_err, ecolor='k', fmt=' ', alpha=0.25, zorder=-1)
+            plt.plot(self.time - self.time_offset, self.sap_flatten_model_masked, zorder=1, label=method, c=color)
+            plt.ylabel('TESS SAP flux [$e^-/s$]')
         else:
-            plt.scatter(self.time, self.pdcsap_flux, c='C0', s=3, zorder=0)
-            plt.errorbar(self.time, self.pdcsap_flux, yerr=self.pdcsap_flux_err, ecolor='k', fmt=' ', alpha=0.25, zorder=-1)
-            plt.plot(self.time, self.pdcsap_flatten_model_masked, zorder=1, label=method, c=color)
-            plt.ylabel('TESS SAP flux [e/s]')
+            plt.scatter(self.time - self.time_offset, self.pdcsap_flux, c='C0', s=3, zorder=0)
+            plt.errorbar(self.time - self.time_offset, self.pdcsap_flux, yerr=self.pdcsap_flux_err, ecolor='k', fmt=' ', alpha=0.25, zorder=-1)
+            plt.plot(self.time - self.time_offset, self.pdcsap_flatten_model_masked, zorder=1, label=method, c=color)
+            plt.ylabel('TESS PDCSAP flux [$e^-/s$]')
 
-        plt.legend()
-        plt.xlabel('BJD_TDB [d]')
+        plt.legend(loc='best')
+        plt.xlabel('BJD_TDB - '+self.offset+' [d]')
