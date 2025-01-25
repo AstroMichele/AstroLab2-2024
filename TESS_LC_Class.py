@@ -26,13 +26,6 @@ class Selection:
     def selection(self):
         finite_selection = np.isfinite(self.pdcsap_flux)
 
-        flag_to_be_checked = np.array([1,2,3,4,5,6,7,8,10,13,15])
-        reference_bitmask_in_decimal_system = 0
-
-        for v in flag_to_be_checked:
-            reference_bitmask_in_decimal_system += 2**(v-1)
-
-        #selective_selection = ~(np.bitwise_and(self.quality_bitmask, reference_bitmask_in_decimal_system) > 0) & finite_selection
         self.conservative_selection = ~(self.quality_bitmask > 0) & finite_selection
 
         plt.scatter(self.bjd_tdb[self.conservative_selection] - self.time_offset, self.sap_flux[self.conservative_selection],
